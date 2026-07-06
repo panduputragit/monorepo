@@ -5,28 +5,31 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/panduputragit/gym/backend/app/auth-service/internal/auth"
 	"github.com/panduputragit/gym/backend/app/auth-service/internal/config"
+	"github.com/panduputragit/gym/backend/app/auth-service/internal/handler"
 	authhttp "github.com/panduputragit/gym/backend/app/auth-service/internal/http"
+	"github.com/panduputragit/gym/backend/app/auth-service/internal/token"
 	"github.com/panduputragit/gym/backend/packages/database"
 	"github.com/panduputragit/gym/backend/packages/httpserver"
 )
 
 func main() {
 	cfg := config.Load()
-	db, err := database.ConnectOptional(context.Background(), database.Config{URL: cfg.DatabaseURL})
+
+	db, err := database.Connect(context.Background(), database.Config{URL: cfg.DatabaseURL})
 	if err != nil {
 		log.Fatalf("connect database: %v", err)
 	}
-	if db != nil {
-		defer db.Close()
-		fmt.Printf("%s connected to database\n", cfg.Name)
-	} else {
-		fmt.Printf("%s database disabled; set AUTH_DATABASE_URL to enable it\n", cfg.Name)
+	defer db.Close()
+	fmt.Printf("%s connected to database\n", cfg.Name)
+
+	tokenMaker, err := token.NewMakerWithRandomKey()
+	if err != nil {
+		log.Fatalf("create token maker: %v", err)
 	}
 
 	router := httpserver.NewRouter(cfg.Name, cfg.GinMode)
-	authhttp.RegisterRoutes(router, authhttp.NewHandler(auth.NewService()))
+	authhttp.RegisterRoutes(router, handler.New(db, tokenMaker))
 
 	addr := ":" + cfg.Port
 	fmt.Printf("%s listening on %s\n", cfg.Name, addr)

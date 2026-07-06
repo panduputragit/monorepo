@@ -1,5 +1,6 @@
 SERVICES := api-gateway auth-service employee-service branch-service member-service membership-service attendance-service notification-service payment-service
 BUILD_TARGETS := $(addprefix build-,$(SERVICES))
+VET_TARGET := $(addprefix vet-,$(SERVICES))
 RUN_TARGETS := $(addprefix run-,$(SERVICES))
 
 .PHONY: gen build-all deps help $(BUILD_TARGETS) $(RUN_TARGETS)
@@ -15,6 +16,11 @@ $(BUILD_TARGETS):
 	@service=$(@:build-%=%); \
 	echo "Building $$service..."; \
 	cd app/$$service && go build -buildvcs=false -o ../../bin/$$service ./cmd/server
+
+$(VET_TARGET):
+	@service=$(@:vet-%=%); \
+	echo "ve $$service..."; \
+	cd app/$$service && go vet -buildvcs=false -o ../../bin/$$service ./cmd/server
 
 $(RUN_TARGETS):
 	@service=$(@:run-%=%); \
